@@ -11,30 +11,49 @@ class Client:
         self._socket.connect(addr)
         print(f'[CONEXAO] cliente conectado ao servidor em {server_host}:{server_port}\n')
         self.run()
+
+    def enconde_message(self, message):
+        if message == '1':
+            message = f'{USER_QUERY_MSG}::='
+            message += str(input(f'Insira o usuário a ser buscado> '))
+            
+        elif message == '2':
+            message = f'{DISCONNECT_MSG}::={self._name}'
+
+        elif message == '3':
+            message = f'{TABLE_QUERY_MSG}::={self._name}' 
+
+        return message
+
+    def decode_message(self, message):
+        msg = message.split("::=")
+        return msg
     
     def run(self):     
         msg = f'{NEW_REGISTER_MSG}::={self._name},{self._ip},{self._reception_port}'
         self._socket.send(msg.encode(FORMAT))
 
         print('Para realizar uma consulta pelo nome de usuário, insira \'1\'')
-        print('Para se desvincular do servidor, insira \'2\'\n')
+        print('Para se desvincular do servidor, insira \'2\'')
+        print('Para consultar a tabela de clientes conectados no servidor, insira \'3\'\n')
 
-        while True:
-            #Insira seu nome, IP e porta para recepção de chamadas:
-            msg = str(input(f'> '))
-            
-            if msg == '1':
-                msg = f'{USER_QUERY_MSG}::='
-                msg += str(input(f'Insira o usuário a ser buscado> '))
-            
-            elif msg == '2':
-                msg = f'{DISCONNECT_MSG}::={self._name}'
+        conectado = True
+        while conectado:
+            msg = self._socket.recv(SIZE).decode(FORMAT)
+            msg = self.decode_message(msg)
+            print(f'[SERVIDOR]: {msg[1]}')
+
+            if msg[0] == DISCONNECT_MSG:
+                conectado = False
+
+            else:
+                msg = str(input(f'> '))
+                msg = self.enconde_message(msg)
+                self._socket.send(msg.encode(FORMAT))
+
+        self._socket.close()
 
 
-            self._socket.send(msg.encode(FORMAT))
-            # else:
-            #     msg = self._socket.recv(SIZE).decode(FORMAT)
-            #     print(f'[SERVIDOR] {msg}')
-    
+        
 
-k = Client(host, port, 'Sara', '192.168.252.228', '5000')
+k = Client(host, port, 'Saaara', '192.168.452.238', '5000')

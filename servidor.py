@@ -32,39 +32,52 @@ class Server:
             print(f'[CONEXOES ATIVAS] {threading.active_count() - 1}')
     
     def handle_client(self, conn, addr):
-        while True:
+        conectado = True
+        while conectado:
             msg = conn.recv(SIZE).decode(FORMAT)
             print(f'[{addr}] {msg}')
-            self.decode_message(msg)
+            msg = self.decode_message(msg)
+
+            if msg[0] == DISCONNECT_MSG:
+                client = msg[1]
+                print(f'[CLIENTE DESCONECTADO] {client} deixou o servidor ...')
+                print(f'[CONEXOES ATIVAS] {threading.active_count() - 1}')
+                msg = f'{DISCONNECT_MSG}::=VOCÊ FOI DESCONECTADO!'
+                conectado = False
+
+            elif msg[0] == NEW_REGISTER_MSG:
+                name, ip, reception_port = msg[1].split(',')
+                msg = self.add_client_register(name, ip, reception_port)
+                print(self.clients_table())
             
-            msg = f'Mensagem recebida: {msg}'
+            elif msg[0] == USER_QUERY_MSG:
+                name = msg[1]
+                msg = f'{USER_QUERY_MSG}::={self.query_user(name)}'
+
+            elif msg[0] == TABLE_QUERY_MSG:
+                name = msg[1]
+                msg = f'{TABLE_QUERY_MSG}::={self.clients_table()}'
+
+            else:
+                msg = "[WARNING]::=TENTE NOVAMENTE"
+            
             conn.send(msg.encode(FORMAT))
+            
+        conn.close()
     
     def decode_message(self, message):
         msg = message.split("::=")
-
-        if msg[0] == DISCONNECT_MSG:
-            client = msg[1]
-            print(f'[CLIENTE DESCONECTADO] {client} deixou o servidor ...')
-            print(f'[CONEXOES ATIVAS] {threading.active_count() - 1}')
-
-        elif msg[0] == NEW_REGISTER_MSG:
-            name, ip, reception_port = msg[1].split(',')
-            self.add_client_register(name, ip, reception_port)
-            self.print_clients()
+        return msg
         
-        elif msg[0] == USER_QUERY_MSG:
-            name = msg[1]
-            self.query_user(name)
             
     def add_client_register(self, name, ip, reception_port):
         if self._clients.get(name) is None: 
             self._clients[name] = ClientRegister(ip, reception_port)
-            msg = f'[SUCESSO NO REGISTRO] {name} inserido/a!'
+            msg = f'[SUCESSO NO REGISTRO]::={name} inserido/a!'
         else:
-            msg = '[FALHA DE REGISTRO] Os dados informados já existem!'  
-            #enviar msg para quem buscou
-        print(msg)
+            msg = '[FALHA DE REGISTRO]::=Você já está cadastrado!'  
+        return msg
+
 
     def query_user(self, client_name):
         client = self._clients.get(client_name)
@@ -74,15 +87,15 @@ class Server:
             msg = '[FALHA NA CONSULTA] O usuário informado não existe!'
         else:
             msg = f'NOME: {client_name:<12} | IP: {client.get_ip():<20} | RECEPTION_PORT: {client.get_reception_port():<6}'
-        print(msg)
+        return msg
     
-    def print_clients(self):
+    def clients_table(self):
         msg = f'{"NOME":<12} | {"IP":<20} | {"PORTA":<6}\n'
         msg += '-' * 60 + '\n'
         for name in self._clients:
             client = self._clients.get(name)
             msg += f'{name:<12} | {client.get_ip():<20} | {client.get_reception_port():<6}\n'
             msg += '-' * 60 + '\n'
-        print(msg)
+        return msg
 
 s = Server(host, port)
