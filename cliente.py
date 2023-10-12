@@ -29,7 +29,7 @@ class Client:
         msg = message.split("::=")
         return msg
     
-    def run(self):     
+    def run(self):    
         msg = f'{NEW_REGISTER_MSG}::={self._name},{self._ip},{self._reception_port}'
         self._socket.send(msg.encode(FORMAT))
 
@@ -53,7 +53,15 @@ class Client:
 
         self._socket.close()
 
+def main():
+    nome = str(input(f'Insira o seu nome>'))
+    endereco = str(input(f'Insira o seu endereço de IP>'))
+    porta = str(input(f'Insira a sua porta>'))
 
+    cliente = Client(host, port, nome, endereco, porta)
+
+
+
+if __name__ == "__main__":
+    main()
         
-
-k = Client(host, port, 'Saaara', '192.168.452.238', '5000')

@@ -65,6 +65,7 @@ class Server:
             
         conn.close()
     
+    
     def decode_message(self, message):
         msg = message.split("::=")
         return msg
@@ -82,7 +83,6 @@ class Server:
     def query_user(self, client_name):
         client = self._clients.get(client_name)
 
-        #enviar msg para quem buscou
         if client is None:
             msg = '[FALHA NA CONSULTA] O usuário informado não existe!'
         else:
