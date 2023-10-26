@@ -55,9 +55,9 @@ class Client:
         self._socket.close() #função que fecha o socket e finaliza o processo do cliente
 
 def main():
-    nome = str(input(f'Insira o seu nome>'))
-    endereco = str(input(f'Insira o seu endereço de IP>'))
-    porta = str(input(f'Insira a sua porta>'))
+    nome = str(input(f'Insira o seu nome> '))
+    endereco = str(input(f'Insira o seu endereço de IP> '))
+    porta = str(input(f'Insira a sua porta> '))
 
     cliente = Client(host, port, nome, endereco, porta)
 
