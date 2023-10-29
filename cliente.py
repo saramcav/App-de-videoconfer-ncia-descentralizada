@@ -10,7 +10,6 @@ class Client:
         addr = (server_host, server_port) #criação do par ip-porta do servidor
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #criação do socket tcp do cliente
         self._socket.connect(addr) #solicita a conexão com o socket tcp do servidor
-        print(f'[CONEXAO] cliente conectado ao servidor em {server_host}:{server_port}\n')
         self.run()
 
     def encode_message(self, message): #função que cria a mensagem associada à opção escolhida no menu para ser enviada ao servidor
@@ -26,7 +25,7 @@ class Client:
 
         return message
 
-    def decode_message(self, message): #função para decodificar uma mensagem recebida do servidor
+    def split_message(self, message): #função para decodificar uma mensagem recebida do servidor
         msg = message.split("::=")
         return msg
     
@@ -36,17 +35,21 @@ class Client:
 
         print('Para realizar uma consulta pelo nome de usuário, insira \'1\'')
         print('Para se desvincular do servidor, insira \'2\'')
-        print('Para consultar a tabela de clientes conectados no servidor, insira \'3\'\n')
 
         conectado = True
         while conectado:
             msg = self._socket.recv(SIZE).decode(FORMAT) #função que fica ouvindo o servidor 
-            msg = self.decode_message(msg) 
+            msg = self.split_message(msg) 
             print(f'[SERVIDOR]: {msg[1]}')
 
             if msg[0] == DISCONNECT_MSG: #se receber uma mensagem do servidor que a conexão foi encerrada, ele sai do loop
                 conectado = False
-
+            
+            elif msg[0] == FORCED_DISCONNECTION_MSG:
+                msg = f'{FORCED_DISCONNECTION_MSG}::={self._name}'
+                self._socket.send(msg.encode(FORMAT))
+                conectado = False
+            
             else:
                 msg = str(input(f'> ')) #input para a escolha das mensagens que são enviadas ao servidor
                 msg = self.encode_message(msg)
