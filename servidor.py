@@ -72,10 +72,6 @@ class Server:
                 name = msg[1]
                 msg = f'{USER_QUERY_MSG}::={self.query_user(name)}' #mensagem de retorno para o cliente
 
-            elif msg[0] == TABLE_QUERY_MSG:
-                name = msg[1]
-                msg = f'{TABLE_QUERY_MSG}::={self.clients_table()}' #mensagem de retorno para o cliente
-
             else:
                 msg = f'{WRONG_OPTION}::=OPÇÃO INVÁLIDA' #mensagem de retorno para o cliente
             
