@@ -1,11 +1,12 @@
-import socket 
+import socket
+import threading
 from utils import *
 
 class Client:
     #Classe cliente com as suas respectivas informações de nome, porta e ip
-    def __init__(self, server_host, server_port, name, ip, reception_port):
+    def __init__(self, server_host, server_port, name, reception_port):
         self._name = name
-        self._ip = ip
+        self._ip = socket.gethostbyname(socket.gethostname())
         self._reception_port = reception_port
         addr = (server_host, server_port) #criação do par ip-porta do servidor
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #criação do socket tcp do cliente
@@ -20,9 +21,6 @@ class Client:
         elif message == '2':
             message = f'{DISCONNECT_MSG}::={self._name}'
 
-        elif message == '3':
-            message = f'{TABLE_QUERY_MSG}::={self._name}' 
-
         return message
 
     def split_message(self, message): #função para decodificar uma mensagem recebida do servidor
@@ -35,6 +33,7 @@ class Client:
 
         print('Para realizar uma consulta pelo nome de usuário, insira \'1\'')
         print('Para se desvincular do servidor, insira \'2\'')
+        print('Para se conectar a outro cliente, insira \'3\'')
 
         conectado = True
         while conectado:
@@ -45,9 +44,9 @@ class Client:
             if msg[0] == DISCONNECT_MSG: #se receber uma mensagem do servidor que a conexão foi encerrada, ele sai do loop
                 conectado = False
             
-            elif msg[0] == FORCED_DISCONNECTION_MSG:
+            elif msg[0] == FORCED_DISCONNECTION_MSG: #se receber uma mensagem de desconexão forçada, o cliente manda mensagem confirmando a desconexão 
                 msg = f'{FORCED_DISCONNECTION_MSG}::={self._name}'
-                self._socket.send(msg.encode(FORMAT))
+                self._socket.send(msg.encode(FORMAT)) 
                 conectado = False
             
             else:
@@ -57,12 +56,15 @@ class Client:
 
         self._socket.close() #função que fecha o socket e finaliza o processo do cliente
 
+   
 def main():
     nome = str(input(f'Insira o seu nome> '))
-    endereco = str(input(f'Insira o seu endereço de IP> '))
-    porta = str(input(f'Insira a sua porta> '))
-
-    cliente = Client(host, port, nome, endereco, porta)
+    porta = int(input(f'Insira a sua porta> '))
+    while(porta < 1025 or porta > 65535): #vericação para o cliente digitar uma porta correta
+        print("Porta inválida, tente novamente (1025 até 65535).")
+        porta = int(input(f'Insira a sua porta> '))
+    
+    cliente = Client(ip_server, server_port, nome, str(porta))
 
 
 if __name__ == "__main__":
