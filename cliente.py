@@ -1,5 +1,4 @@
 import socket
-import threading
 from utils import *
 
 class Client:
@@ -11,7 +10,6 @@ class Client:
         addr = (server_host, server_port) #criação do par ip-porta do servidor
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #criação do socket tcp do cliente
         self._socket.connect(addr) #solicita a conexão com o socket tcp do servidor
-        self.run()
 
     def encode_message(self, message): #função que cria a mensagem associada à opção escolhida no menu para ser enviada ao servidor
         if message == '1':
@@ -33,7 +31,6 @@ class Client:
 
         print('Para realizar uma consulta pelo nome de usuário, insira \'1\'')
         print('Para se desvincular do servidor, insira \'2\'')
-        print('Para se conectar a outro cliente, insira \'3\'')
 
         conectado = True
         while conectado:
@@ -65,6 +62,7 @@ def main():
         porta = int(input(f'Insira a sua porta> '))
     
     cliente = Client(ip_server, server_port, nome, str(porta))
+    cliente.run()
 
 
 if __name__ == "__main__":

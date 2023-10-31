@@ -32,7 +32,6 @@ class Server:
         self._socket.bind(addr) #vincula um par ip-porta para o socket do servidor
         self._socket.listen() #servidor fica escutando as solicitações dos clientes
         print(f'O servidor está ouvindo em {host}:{port}')
-        self.run()
     
     def run(self):
         while True:
@@ -52,7 +51,7 @@ class Server:
                 client = msg[1]
                 print(f'[CLIENTE DESCONECTADO] {client} deixou o servidor ...')
                 print(f'[CONEXOES ATIVAS] {threading.active_count() - 2}')
-                msg = f'{DISCONNECT_MSG}::=VOCÊ FOI DESCONECTADO!' #mensagem de retorno para o cliente
+                msg = f'{DISCONNECT_MSG}::=VOCÊ FOI DESCONECTADO/A!' #mensagem de retorno para o cliente
                 self._clients[client].set_status(False)
                 conectado = False #torna variável = false para poder sair do loop
                 print(self.clients_table())
@@ -101,9 +100,10 @@ class Server:
         elif client_register.get_status() == True: #caso exista o nome na tabela e ele está online, o servidor força a desconexão
             msg = f'{FORCED_DISCONNECTION_MSG}::=Já existe uma conexão aberta para esse cliente!'
         else: #caso exista o nome na tabela e ele está offline, o servidor atualiza a porta, caso ela seja diferente da registrada anteriormente
-            msg = f'{REGISTRATION_FAILED_MSG}::=Você já está cadastrado. Bem vindo/a novamente!' 
+            msg = f'{REGISTRATION_FAILED_MSG}::=Você já está cadastrado/a. Bem vindo/a novamente!' 
             if(client_register.get_reception_port() != reception_port):
                 client_register.set_reception_port(reception_port) 
+                msg += ' Sua porta foi atualizada com sucesso!'
             client_register.set_status(True)
 
         return msg
@@ -131,4 +131,9 @@ class Server:
             msg += '-' * 60 + '\n'
         return msg
 
-s = Server(ip_server, server_port)
+def main(): 
+    s = Server(ip_server, server_port) 
+    s.run() 
+ 
+if __name__ == "__main__": 
+    main()

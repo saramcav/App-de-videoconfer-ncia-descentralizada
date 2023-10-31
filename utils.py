@@ -1,5 +1,5 @@
 import socket
-ip_server = '25.64.198.39'
+ip_server = socket.gethostbyname(socket.gethostname())
 server_port = 5000
 SIZE = 1024
 FORMAT = 'utf-8'
