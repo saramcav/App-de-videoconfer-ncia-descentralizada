@@ -14,7 +14,7 @@ class Client:
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #criação do socket tcp do cliente
         self._socket.connect(addr) #solicita a conexão com o socket tcp do servidor
 
-    def clearConsole(self):
+    def clear_console(self):
         os.system('cls' if os.name == 'nt' else 'clear')
 
     def encode_message(self, message): #função que cria a mensagem associada à opção escolhida no menu para ser enviada ao servidor
@@ -50,7 +50,7 @@ class Client:
 
         conectado = True
         while conectado:
-            self.clearConsole() #função para limpar o console
+            self.clear_console() #função para limpar o console
             msg = self._socket.recv(SIZE).decode(FORMAT) #função que fica ouvindo o servidor 
             msg = self.split_message(msg) 
             print(f'[SERVIDOR]: {msg[1]}')
