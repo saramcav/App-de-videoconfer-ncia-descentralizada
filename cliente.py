@@ -1,7 +1,10 @@
 import os
 import socket
 import getpass
+import threading
 from utils import *
+from p2p_client import P2PClient
+from p2p_server import P2PServer
 
 class Client:
     #Classe cliente com as suas respectivas informações de nome, porta e ip
@@ -14,23 +17,36 @@ class Client:
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #criação do socket tcp do cliente
         self._socket.connect(addr) #solicita a conexão com o socket tcp do servidor
 
+        #etapa2
+        self._listening_server_name = True
+        self._p2p_client = None
+        self._p2p_server = P2PServer(self)
+
+
+    def set_listening_server_name(self, truth_value):
+        self._listening_server_name = truth_value
+
     def clear_console(self):
         os.system('cls' if os.name == 'nt' else 'clear')
 
     def encode_message(self, message): #função que cria a mensagem associada à opção escolhida no menu para ser enviada ao servidor
         if message == '1':
             message = f'{USER_QUERY_MSG}::='
-            message += str(input(f'Insira o usuário a ser buscado> '))
+            message += input(f'Insira o usuário a ser buscado> ')
 
         elif message == '2':
             message = f'{UPDATE_MSG}::={self._name},'
             port = int(input('Indique sua nova porta de recepção> '))
             while(port < 1025 or port > 65535): #vericação para o cliente digitar uma porta correta
-                print("Porta inválida, tente novamente (1025 até 65535).")
+                print('Porta inválida, tente novamente (1025 até 65535).')
                 port = int(input('Indique sua nova porta de recepção> '))
             message += str(port)
 
         elif message == '3':
+            message = f'{USER_QUERY_MSG}::='
+            message += input('Insira o nome de para quem deseja ligar> ')
+
+        elif message == '4':
             message = f'{DISCONNECT_MSG}::={self._name}'
 
         return message
@@ -48,45 +64,73 @@ class Client:
 
         self._socket.send(msg.encode(FORMAT)) #função que envia a mensagem de registro para o servidor
 
+        server_p2p_thread = threading.Thread(target=self._p2p_server.start, args=(self._ip, self._reception_port))
+        server_p2p_thread.start()
+
+    
+        receiving = True
         conectado = True
         while conectado:
-            self.clear_console() #função para limpar o console
-            msg = self._socket.recv(SIZE).decode(FORMAT) #função que fica ouvindo o servidor 
-            msg = self.split_message(msg) 
-            print(f'[SERVIDOR]: {msg[1]}')
-
-            if msg[0] == DISCONNECT_MSG: #se receber uma mensagem do servidor que a conexão foi encerrada, ele sai do loop
-                conectado = False
-            
-            elif msg[0] == FORCED_DISCONNECTION_MSG: #se receber uma mensagem de desconexão forçada, o cliente manda mensagem confirmando a desconexão 
-                msg = f'{FORCED_DISCONNECTION_MSG}::={self._name}'
-                self._socket.send(msg.encode(FORMAT)) 
-                conectado = False
-
-            elif msg[0] == TRY_AGAIN or msg[0] == UPDATE_MSG: #tratamento de erro se o usuario digitar uma porta que já existe na tabela no momento do cadastro ou no momento de atualizar sua porta
-                port = int(input(f'Insira a sua porta> '))
-                while(port < 1025 or port > 65535): #vericação para o cliente digitar uma porta correta
-                    print("Porta inválida, tente novamente (1025 até 65535).")
-                    port = int(input(f'Insira a sua porta> '))
-                self._reception_port = port
-
-                if(msg[0] == TRY_AGAIN): #nesse caso seria no momento do cadastro
-                    msg = f'{NEW_REGISTER_MSG}::={self._name},{self._ip},{self._reception_port},{self._password}'
-                else: #nesse caso seria no momento de atualizar a porta, depois de logado
-                    msg = f'{UPDATE_MSG}::={self._name},{self._reception_port}'
+            if self._listening_server_name:
+                #self.clear_console() #função para limpar o console
+                if receiving:
+                    msg = self._socket.recv(SIZE).decode(FORMAT) #função que fica ouvindo o servidor 
+                    msg = self.split_message(msg) 
+                    print(f'[SERVIDOR]: {msg[1]}')
+                else:
+                    msg = '[MENU]::='
+                    msg = self.split_message(msg)
+                    receiving = True
                 
-                self._socket.send(msg.encode(FORMAT)) 
+    
+                if msg[0] == DISCONNECT_MSG: #se receber uma mensagem do servidor que a conexão foi encerrada, ele sai do loop
+                    conectado = False
+                
+                elif msg[0] == FORCED_DISCONNECTION_MSG: #se receber uma mensagem de desconexão forçada, o cliente manda mensagem confirmando a desconexão 
+                    msg = f'{FORCED_DISCONNECTION_MSG}::={self._name}'
+                    self._socket.send(msg.encode(FORMAT)) 
+                    conectado = False
 
-            
-            else:
-                print('-' * 50)
-                print('\'1\' - Realizar consulta por nome de usuário')
-                print('\'2\' - Atualizar sua porta de recepção')
-                print('\'3\' - Desvincular-se do servidor')
-                print("-" * 50)
-                msg = str(input(f'> ')) #input para a escolha das mensagens que são enviadas ao servidor
-                msg = self.encode_message(msg)
-                self._socket.send(msg.encode(FORMAT))  #função que envia a mensagem de registro para o servidor
+                elif msg[0] == TRY_AGAIN or msg[0] == UPDATE_MSG: #tratamento de erro se o usuario digitar uma porta que já existe na tabela no momento do cadastro ou no momento de atualizar sua porta
+                    port = int(input(f'Insira a sua porta> '))
+                    while(port < 1025 or port > 65535): #vericação para o cliente digitar uma porta correta
+                        print('Porta inválida, tente novamente (1025 até 65535).')
+                        port = int(input(f'Insira a sua porta> '))
+                    self._reception_port = port
+
+                    if(msg[0] == TRY_AGAIN): #nesse caso seria no momento do cadastro
+                        msg = f'{NEW_REGISTER_MSG}::={self._name},{self._ip},{self._reception_port},{self._password}'
+                    else: #nesse caso seria no momento de atualizar a porta, depois de logado
+                        msg = f'{UPDATE_MSG}::={self._name},{self._reception_port}'
+                    
+                    self._socket.send(msg.encode(FORMAT)) 
+
+                elif msg[0] == USER_QUERY_MSG:
+                    print('Deseja ligar para este usuário?\n \'s\' - sim\n \'n\' - não')
+                    call_answer = input('> ')
+                    if call_answer == 's':
+                        _, peer_ip, peer_port = msg[1].split('|')
+                        peer_ip = peer_ip.split(':')[1].strip()
+                        peer_port = peer_port.split(':')[1].strip()
+
+                        self._p2p_client = P2PClient(self)
+                        self.listening_server_name = False
+                        client_p2p_thread = threading.Thread(target=self._p2p_client.start, args=(peer_ip, peer_port, self._name))
+                        client_p2p_thread.start()
+                    else:
+                        receiving = False
+                        continue
+
+                else:
+                    print('-' * 50)
+                    print('\'1\' - Realizar consulta por nome de usuário')
+                    print('\'2\' - Atualizar sua porta de recepção')
+                    print('\'3\' - Iniciar ligação')
+                    print('\'4\' - Desvincular-se do servidor' )
+                    print('-' * 50)
+                    msg = str(input(f'> ')) #input para a escolha das mensagens que são enviadas ao servidor
+                    msg = self.encode_message(msg)
+                    self._socket.send(msg.encode(FORMAT))  #função que envia a mensagem de registro para o servidor
 
         self._socket.close() #função que fecha o socket e finaliza o processo do cliente
 
