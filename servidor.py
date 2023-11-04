@@ -1,32 +1,7 @@
 import socket
 import threading
-from utils import *
-
-class ClientRegister:
-    def __init__(self, ip, reception_port, password, online):
-        self._ip = ip
-        self._reception_port = reception_port
-        self._password = password
-        self._online = online
-    
-    def get_ip(self):
-        return self._ip
-
-    def get_reception_port(self):
-        return self._reception_port
-    
-    def get_status(self):
-        return self._online
-    
-    def get_password(self):
-        return self._password
-
-    def set_online_status(self, online):
-        self._online = online 
-
-    def set_reception_port(self, reception_port):
-        self._reception_port = reception_port
-
+from config import *
+from client_register import ClientRegister
 
 class Server:
     def __init__(self, host, port):
@@ -156,9 +131,9 @@ class Server:
         client = self._clients.get(client_name)
 
         if client is None:
-            msg = f'{USER_NOT_FOUND_MSG} O usuário informado não existe!'
+            msg = f'{USER_NOT_FOUND_MSG}: O usuário informado não existe!'
         elif client.get_status() == False:
-            msg = f'{USER_NOT_FOUND_MSG} O usuário não está online no momento!'
+            msg = f'{USER_NOT_FOUND_MSG}: O usuário não está online no momento!'
         else:
             msg = f'NOME: {client_name:<12} | IP: {client.get_ip():<20} | RECEPTION_PORT: {client.get_reception_port():<6}'
         return msg

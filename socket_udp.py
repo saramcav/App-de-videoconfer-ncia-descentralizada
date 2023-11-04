@@ -1,5 +1,5 @@
 import socket
-from utils import *
+from config import *
 
 class SocketUDP:
     def __init__(self):

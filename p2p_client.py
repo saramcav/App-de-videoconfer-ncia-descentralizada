@@ -1,6 +1,6 @@
 import socket
 import os
-from utils import *
+from config import *
 
 class P2PClient:
     def __init__(self, server_names_client):
@@ -20,8 +20,8 @@ class P2PClient:
         call_request = f'{PEER_CALL_REQUEST}::={client_name}'
         self._socket.send(call_request.encode(FORMAT)) 
 
-        conectado = True
-        while conectado:
+        connected = True
+        while connected:
             msg = self._socket.recv(SIZE).decode(FORMAT) 
             msg = self.split_message(msg) 
 
@@ -31,9 +31,10 @@ class P2PClient:
 
             elif msg[0] == SERVER_CALL_NACK:
                 print(f'{msg[1]} recusou a sua ligação.')
-                msg = f'{DISCONNECT_MSG}::='
-                self._socket.send(msg.encode(FORMAT))
-                conectado = False
-                #self._server_names_client.set_listening_server_name(True)
+                a = f'{DISCONNECT_MSG}::='
+                connected = False
+                self._socket.send(a.encode(FORMAT))
 
         self._socket.close()
+        self._server_names_client.set_listening_server_name(True)
+
