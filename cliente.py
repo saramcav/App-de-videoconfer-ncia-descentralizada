@@ -5,6 +5,7 @@ from config import *
 from p2p_client import P2PClient
 from p2p_server import P2PServer
 from util import Util
+import msvcrt
 
 class Client:
     #Classe cliente com as suas respectivas informações de nome, porta e ip
@@ -23,12 +24,31 @@ class Client:
         self._p2p_server = P2PServer(self)
 
         self._rejected_call = False
+        self._in_call = False
+
+    def set_in_call(self, truth_value):
+        self._in_call = truth_value
 
     def set_rejected_call(self, truth_value):
         self._rejected_call = truth_value
 
     def set_listening_server_name(self, truth_value):
         self._listening_server_name = truth_value
+
+    def get_input(self):
+        user_input = ''
+        print('> ', end='', flush=True)
+        while not self._in_call:
+            if msvcrt.kbhit():
+                char = msvcrt.getch().decode()
+                if char == '\r':  
+                    print('')
+                    break
+                else:
+                    print(f'{char}', end='', flush=True)
+                    user_input += char
+
+        return user_input
 
     def encode_message(self, message): #função que cria a mensagem associada à opção escolhida no menu para ser enviada ao servidor
         if message == '1':
@@ -131,9 +151,13 @@ class Client:
                     print('\'3\' - Iniciar ligação')
                     print('\'4\' - Desvincular-se do servidor' )
                     print('-' * 50)
-                    msg = Util.get_input()
+                    msg = self.get_input()
+                    if msg == '':
+                        receiving = False
+                        continue
                     msg = self.encode_message(msg)
                     self._socket.send(msg.encode(FORMAT))
+                    print('saí do menu', self._listening_server_name)
 
         self._socket.close() #função que fecha o socket e finaliza o processo do cliente
 

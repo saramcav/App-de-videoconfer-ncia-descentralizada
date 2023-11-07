@@ -16,6 +16,7 @@ class P2PClient:
         self.run(client_name)
     
     def run(self, client_name):
+        self._server_names_client.set_listening_server_name(False)
         call_request = f'{PEER_CALL_REQUEST}::={client_name}'
         self._socket.send(call_request.encode(FORMAT)) 
 
@@ -30,12 +31,12 @@ class P2PClient:
                 print(f'{name} aceitou a sua ligação. Portas: {peer_audio_port}, {peer_video_port}')
 
             elif msg[0] == SERVER_CALL_NACK:
-                print(f'{msg[1]} recusou a sua ligação.')
+                print(f'{msg[1]} recusou a sua ligação. Iniciando ligação...')
                 answer_msg = f'{DISCONNECT_MSG}::='
                 connected = False
                 self._server_names_client.set_rejected_call(True)
                 self._socket.send(answer_msg.encode(FORMAT))
 
-        self._socket.close()
         self._server_names_client.set_listening_server_name(True)
+        self._socket.close()
 

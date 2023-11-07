@@ -1,5 +1,4 @@
 import os
-import msvcrt
 
 class Util:
     def get_port_input(label = ''):
@@ -13,20 +12,6 @@ class Util:
     def clear_console():
         os.system('cls' if os.name == 'nt' else 'clear')
 
-    def get_input():
-        user_input = ""
-        print("> ", end='', flush=True)
-        while True:
-            if msvcrt.kbhit():
-                char = msvcrt.getch().decode()
-                if char == '\r':  
-                    print('')
-                    break
-                else:
-                    print(f'{char}', end='', flush=True)
-                    user_input += char
-
-        return user_input
     
     def process_input(text, valid_answers):
         valid = True

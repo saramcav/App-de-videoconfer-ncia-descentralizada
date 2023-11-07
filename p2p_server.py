@@ -37,12 +37,13 @@ class P2PServer:
             print('Iniciando ligação...')
         else:
             print('Chamada recusada. Esperando nova ligação...')
-            self._server_names_client.set_listening_server_name(True)
             answer_msg = f'{SERVER_CALL_NACK}::={p2p_client}'
         
         return answer_msg
         
     def handle_client(self, conn, addr):
+        self._server_names_client.set_listening_server_name(False)
+        self._server_names_client.set_in_call(True)
         connected = True
         while connected:
             msg = conn.recv(SIZE).decode(FORMAT) 
@@ -50,8 +51,7 @@ class P2PServer:
             msg = self.split_message(msg) 
 
             if msg[0] == PEER_CALL_REQUEST:
-                Util.clear_console()
-                self._server_names_client.set_listening_server_name(False)
+                #Util.clear_console()
                 p2p_client = msg[1]
                 print(f'{p2p_client} está te ligando. Deseja aceitar a ligação?\n \'s\' - sim \n \'n\' - não')
                 answer_msg = self.compute_call_answer(p2p_client, ['s', 'n'])
@@ -59,6 +59,7 @@ class P2PServer:
         
             elif msg[0] == DISCONNECT_MSG:
                 connected = False
+                self._server_names_client.set_in_call(False)
                 self._server_names_client.set_listening_server_name(True)
 
         conn.close()
