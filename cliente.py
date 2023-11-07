@@ -1,4 +1,3 @@
-import os
 import socket
 import getpass
 import threading
@@ -23,6 +22,11 @@ class Client:
         self._p2p_client = None
         self._p2p_server = P2PServer(self)
 
+        self._rejected_call = False
+
+    def set_rejected_call(self, truth_value):
+        self._rejected_call = truth_value
+
     def set_listening_server_name(self, truth_value):
         self._listening_server_name = truth_value
 
@@ -33,7 +37,7 @@ class Client:
 
         elif message == '2':
             message = f'{UPDATE_MSG}::={self._name},'
-            port = Util.get_port_input()
+            port = Util.get_port_input('Insira a sua porta')
             message += str(port)
 
         elif message == '3':
@@ -50,8 +54,22 @@ class Client:
         msg = message.split("::=")
         return msg
     
+    def compute_user_query_answer(self, message, valid_answers):
+        call_answer = input('> ')
+        call_answer = Util.process_input(call_answer, valid_answers)
+        if call_answer == 's':
+            print('Iniciando ligação...')
+            _, peer_ip, peer_port = message.split('|')
+            peer_ip = peer_ip.split(':')[1].strip()
+            peer_port = peer_port.split(':')[1].strip()
+
+            self._p2p_client = P2PClient(self)
+            self._listening_server_name = False
+            client_p2p_thread = threading.Thread(target=self._p2p_client.start, args=(peer_ip, peer_port, self._name))
+            client_p2p_thread.start()
+    
     def run(self, option):
-        if option == 1:  #verifica se a opção escolhida foi a opção de cadastro  
+        if option == '1':  #verifica se a opção escolhida foi a opção de cadastro  
             msg = f'{NEW_REGISTER_MSG}::={self._name},{self._ip},{self._reception_port},{self._password}' #mensagem de registro 
         else: #se não for, ele solicitou o login
             msg = f'{LOGIN}::={self._name},{self._password}'
@@ -61,22 +79,25 @@ class Client:
         server_p2p_thread = threading.Thread(target=self._p2p_server.start, args=(self._ip, self._reception_port))
         server_p2p_thread.start()
 
-    
         receiving = True
         connected = True
         while connected:
             if self._listening_server_name:
-                #Util.clear_console()
+                if not self._rejected_call:
+                    Util.clear_console()
+                else:
+                    self.rejected_call = False
+                
                 if receiving:
                     msg = self._socket.recv(SIZE).decode(FORMAT) #função que fica ouvindo o servidor 
                     msg = self.split_message(msg) 
-                    print(f'[SERVIDOR]: {msg[1]}')
+                    print(f'[SERVIDOR DE NOMES]: {msg[1]}')
                 else:
                     msg = '[MENU]::='
                     msg = self.split_message(msg)
                     receiving = True
                 
-    
+
                 if msg[0] == DISCONNECT_MSG: #se receber uma mensagem do servidor que a conexão foi encerrada, ele sai do loop
                     connected = False
                 
@@ -86,7 +107,7 @@ class Client:
                     connected = False
 
                 elif msg[0] == TRY_AGAIN or msg[0] == UPDATE_MSG: #tratamento de erro se o usuario digitar uma porta que já existe na tabela no momento do cadastro ou no momento de atualizar sua porta
-                    port = Util.get_port_input()
+                    port = Util.get_port_input('Insira a sua porta')
                     self._reception_port = port
 
                     if(msg[0] == TRY_AGAIN): #nesse caso seria no momento do cadastro
@@ -97,20 +118,11 @@ class Client:
                     self._socket.send(msg.encode(FORMAT)) 
 
                 elif msg[0] == USER_QUERY_MSG:
-                    if msg[1].split(':')[0] != USER_NOT_FOUND_MSG: 
+                    content = msg[1]
+                    if content.split(':')[0] != USER_NOT_FOUND_MSG: 
                         print('Deseja ligar para este usuário?\n \'s\' - sim\n \'n\' - não')
-                        call_answer = input('> ')
-                        if call_answer == 's':
-                            _, peer_ip, peer_port = msg[1].split('|')
-                            peer_ip = peer_ip.split(':')[1].strip()
-                            peer_port = peer_port.split(':')[1].strip()
-
-                            self._p2p_client = P2PClient(self)
-                            self._listening_server_name = False
-                            client_p2p_thread = threading.Thread(target=self._p2p_client.start, args=(peer_ip, peer_port, self._name))
-                            client_p2p_thread.start()
+                        self.compute_user_query_answer(content, ['s', 'n'])
                     receiving = False
-                    continue
 
                 else:
                     print('-' * 50)
@@ -119,9 +131,9 @@ class Client:
                     print('\'3\' - Iniciar ligação')
                     print('\'4\' - Desvincular-se do servidor' )
                     print('-' * 50)
-                    msg = str(input(f'> ')) #input para a escolha das mensagens que são enviadas ao servidor
+                    msg = Util.get_input()
                     msg = self.encode_message(msg)
-                    self._socket.send(msg.encode(FORMAT))  #função que envia a mensagem de registro para o servidor
+                    self._socket.send(msg.encode(FORMAT))
 
         self._socket.close() #função que fecha o socket e finaliza o processo do cliente
 
@@ -130,22 +142,23 @@ def main():
     print('\'1\' - Realizar cadastro')
     print('\'2\' - Realizar login')
     print('-' * 50)
-    option = int(input('> '))
+    option = input('> ')
+    option = Util.process_input(option, ['1', '2'])
 
-    while option < 1 or option > 2: #vericação para o cliente digitar uma opcao correta
-        print('Escolha entre 1 ou 2!')
-        option = int(input('> '))
-
-    if option == 1:
-        name = str(input(f'Insira o seu nome> '))
-        port = Util.get_port_input()
-
+    if option == '1':
+        name = input('Insira seu nome> ')
+        name = Util.process_open_input('Insira seu nome', name)
+        port = Util.get_port_input('Insira a sua porta')
         password = getpass.getpass('Insira sua senha a ser cadastrada: ')
+        
         client = Client(ip_server, server_port, name, str(port), password)
     else:
-        name = str(input(f'Insira o seu nome> '))
+        name = input('Insira seu nome> ')
+        name = Util.process_open_input('Insira seu nome', name)
         password = getpass.getpass('Insira a sua senha> ')
+        
         client = Client(ip_server, server_port, name, '', password)
+
     client.run(option)
 
 

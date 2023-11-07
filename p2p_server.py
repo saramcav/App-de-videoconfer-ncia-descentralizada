@@ -24,29 +24,37 @@ class P2PServer:
             conn, addr = self._socket.accept()
             thread = threading.Thread(target=self.handle_client, args=(conn, addr))
             thread.start()
+
+    def compute_call_answer(self, p2p_client, valid_answers):
+        call_answer = input('> ')
+        call_answer = Util.process_input(call_answer, valid_answers)
+        if call_answer == 's':
+            print('\nInforme a porta para receber os fluxos de áudio:')
+            audio_port = Util.get_port_input()
+            print('Informe a porta para receber os fluxos de vídeo:')
+            video_port =  Util.get_port_input()
+            answer_msg = f'{SERVER_CALL_ACK}::={p2p_client},{audio_port},{video_port}'
+            print('Iniciando ligação...')
+        else:
+            print('Chamada recusada. Esperando nova ligação...')
+            self._server_names_client.set_listening_server_name(True)
+            answer_msg = f'{SERVER_CALL_NACK}::={p2p_client}'
+        
+        return answer_msg
         
     def handle_client(self, conn, addr):
         connected = True
         while connected:
             msg = conn.recv(SIZE).decode(FORMAT) 
+            print(f'[{addr}] {msg}')
             msg = self.split_message(msg) 
 
             if msg[0] == PEER_CALL_REQUEST:
+                Util.clear_console()
                 self._server_names_client.set_listening_server_name(False)
-                #Util.clear_console()
-                
-                print(f'{msg[1]} está te ligando. Deseja aceitar a ligação?\n \'s\' - sim \n \'n\' - não')
-                call_answer = input('AAAA> ')
-                if call_answer == 's':
-                    print('Informe a porta para receber os fluxos de áudio:')
-                    audio_port = Util.get_port_input()
-                    print('Informe a porta para receber os fluxos de vídeo:')
-                    video_port =  Util.get_port_input()
-                    answer_msg = f'{SERVER_CALL_ACK}::={msg[1]},{audio_port},{video_port}'
-                else:
-                    print('Chamada recusada. Esperando nova ligação...')
-                    #self._server_names_client.set_listening_server_name(True)
-                    answer_msg = f'{SERVER_CALL_NACK}::={msg[1]}'
+                p2p_client = msg[1]
+                print(f'{p2p_client} está te ligando. Deseja aceitar a ligação?\n \'s\' - sim \n \'n\' - não')
+                answer_msg = self.compute_call_answer(p2p_client, ['s', 'n'])
                 conn.send(answer_msg.encode(FORMAT))
         
             elif msg[0] == DISCONNECT_MSG:
