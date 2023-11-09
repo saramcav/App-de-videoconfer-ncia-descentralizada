@@ -1,14 +1,23 @@
 import os
 
 class Util:
-    def get_port_input(label = ''):
-        port = int(input(f'{label}> '))
-        while(port < 1025 or port > 65535):
-            print("Porta inválida, tente novamente (1025 até 65535).")
-            port = int(input(f'{label}> '))
-        
-        return port
-    
+    def get_port_input(used_ports, label=''):
+        while True:
+            try:
+                port = int(input(f'{label}> '))
+                if port < 1025 or port > 65535:
+                    print('[PORTA INVÁLIDA] Tente novamente (1025 até 65535).')
+                    continue
+                
+                if str(port) in used_ports:
+                    print(f'[PORTA INVÁLIDA] Use uma porta diferente de {", ".join(used_ports)}.')
+                    continue
+                
+                return port  
+
+            except ValueError:
+                print('[VALOR INVÁLIDO] Insira um número inteiro válido.')
+
     def clear_console():
         os.system('cls' if os.name == 'nt' else 'clear')
 
