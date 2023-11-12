@@ -11,6 +11,7 @@ class Server:
         self._socket.bind(addr) #vincula um par ip-porta para o socket do servidor
         self._socket.listen() #servidor fica escutando as solicitações dos clientes
         print(f'O servidor está ouvindo em {host}:{port}')
+        
 
     def run(self):
         while True:
@@ -60,6 +61,12 @@ class Server:
                 msg = self.update_client_register(name, new_port) #função que verifica e atualiza a porta
                 print(self.clients_table())
             
+            elif msg[0] == CLIENT_SET_IN_CALL:
+                name, truth_value = msg[1].split(',')
+                self.set_client_call(name, truth_value)
+                print(self.clients_table())
+                continue
+
             conn.send(msg.encode(FORMAT)) #função que envia a mensagem resposta para o cliente
             
         conn.close() #função que encerra a conexão com o socket cliente
@@ -67,6 +74,10 @@ class Server:
     def split_message(self, message): #função para decodificar uma mensagem recebida do cliente
         msg = message.split("::=")
         return msg
+
+    def set_client_call(self, client_name, truth_value):
+        client = self._clients.get(client_name)
+        client.set_in_call(eval(truth_value))
 
     def validate_login(self, name, password):
         client_register = self._clients.get(name)
@@ -116,7 +127,7 @@ class Server:
 
         if client_register is None: #caso o nome informado não esteja na tabela
             if client_addr is None: #caso o par IP-Porta não esteja na tabela, o servidor adiciona o novo registro na tabela
-                self._clients[name] = ClientRegister(ip, reception_port, password, True)
+                self._clients[name] = ClientRegister(ip, reception_port, password, True, False)
                 msg = f'{REGISTRATION_SUCCESS_MSG}::=Cadastro realizado! Bem vindo/a, {name}!'
             else: #caso o par IP-Porta já exista na tabela, o servidor não adiciona o registro e força a desconexão com o cliente
                 msg = f'{TRY_AGAIN}::=Já existe um registro utilizando esse par IP-Porta! Tente novamente com outra porta!'
@@ -132,25 +143,30 @@ class Server:
             msg = f'{USER_NOT_FOUND_MSG}: O usuário informado não existe!'
         elif client.get_status() == False:
             msg = f'{USER_NOT_FOUND_MSG}: O usuário não está online no momento!'
+        elif client.get_in_call():
+            msg = f'{USER_NOT_FOUND_MSG}: O usuário está em chamada no momento!\n'
+            msg += f'NOME: {client_name:<12} | IP: {client.get_ip():<15} | RECEPTION_PORT: {client.get_reception_port():<6}'
         else:
-            msg = f'NOME: {client_name:<12} | IP: {client.get_ip():<20} | RECEPTION_PORT: {client.get_reception_port():<6}'
+            msg = f'NOME: {client_name:<12} | IP: {client.get_ip():<15} | RECEPTION_PORT: {client.get_reception_port():<6}'
         return msg
     
     def clients_table(self): #função que retorna a tabela de todos os clientes conectados no servidor como mensagem
-        msg = f'{"NOME":<12} | {"IP":<20} | {"PORTA":<6} | {"ONLINE":<4}\n'
-        msg += '-' * 60 + '\n'
+        msg = f'{"NOME":<12} | {"IP":<15} | {"PORTA":<6} | {"ONLINE":<6} | {"EM LIGACAO":<8}\n'
+        msg += '-' * 65 + '\n'
         for name in self._clients:
-            status = 'NÃO'
+            status = in_call = 'NÃO'
             client = self._clients.get(name)
             if client.get_status() == True: #verifica se o cliente está online ou não para poder printar o status corretamente
                 status = 'SIM'
-            msg += f'{name:<12} | {client.get_ip():<20} | {client.get_reception_port():<6} | {status:<4}\n'
-            msg += '-' * 60 + '\n'
+            if client.get_in_call():
+                in_call = 'SIM'
+            msg += f'{name:<12} | {client.get_ip():<15} | {client.get_reception_port():<6} | {status:<6} | {in_call:<8}\n'
+            msg += '-' * 65 + '\n'
         return msg
 
 def main(): 
-    s = Server(ip_server, server_port) 
-    s.run() 
+    server = Server(ip_server, server_port) 
+    server.run() 
  
 if __name__ == "__main__": 
     main()

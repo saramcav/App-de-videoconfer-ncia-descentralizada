@@ -5,7 +5,15 @@ from config import *
 from p2p_client import P2PClient
 from p2p_server import P2PServer
 from util import Util
-import msvcrt
+import time
+import os
+if os.name == 'nt':
+    import msvcrt
+else:
+    import sys
+    import termios
+    import tty
+    import select
 
 class Client:
     #Classe cliente com as suas respectivas informações de nome, porta e ip
@@ -17,7 +25,7 @@ class Client:
         addr = (server_host, server_port) #criação do par ip-porta do servidor
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #criação do socket tcp do cliente
         self._socket.connect(addr) #solicita a conexão com o socket tcp do servidor
-        
+
         #etapa2
         self._listening_server_name = True
         self._p2p_client = None
@@ -40,8 +48,12 @@ class Client:
 
     def get_used_ports(self):
         return self._used_ports
+    
+    def send_server_call_msg(self, truth_value):
+        msg = f'{CLIENT_SET_IN_CALL}::={self._name},{truth_value}'
+        self._socket.send(msg.encode(FORMAT))
 
-    def get_input(self, valid_answers):
+    def get_input_windows(self, valid_answers):
         user_input = ''
         print('> ', end='', flush=True)
         while not self._in_call:
@@ -50,7 +62,7 @@ class Client:
                 if char == '\r':
                     print('')
                     break
-                elif char == '\x08':  # Botão de apagar
+                elif char == '\x08' or char == '\x7f' or char == '\b':  # Botão de apagar
                     if user_input:
                         # Apaga o último caractere digitado
                         user_input = user_input[:-1]
@@ -66,6 +78,41 @@ class Client:
             return self.get_input(valid_answers)
         return user_input
 
+    def get_input_linux(self, valid_answers):
+        user_input = ''
+        print('> ', end='', flush=True)
+
+        # Configuração do terminal para leitura não bloqueante
+        old_settings = termios.tcgetattr(sys.stdin)
+        tty.setcbreak(sys.stdin.fileno())
+
+        while not self._in_call:
+            if sys.stdin in select.select([sys.stdin], [], [], 0)[0]:
+                char = sys.stdin.read(1)
+                if char == '\n':
+                    print('')
+                    break
+                elif char == '\x08' or char == '\x7f' or char == '\b': 
+                    if user_input:
+                        user_input = user_input[:-1]
+                        print('\b \b', end='', flush=True)
+                else:
+                    print(f'{char}', end='', flush=True)
+                    user_input += char
+
+        # Restaurar configurações do terminal
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, old_settings)
+
+        user_input = user_input.strip()
+        if user_input not in valid_answers and user_input != '':
+            print(f'[RESPOSTA INVÁLIDA] As respostas possíveis são: {" ou ".join(valid_answers)}.')
+            return self.get_input(valid_answers)
+
+        return user_input
+
+    def get_input(self, valid_answers):
+        return self.get_input_windows(valid_answers) if os.name == 'nt' else self.get_input_linux(valid_answers)
+
 
     def encode_message(self, message): #função que cria a mensagem associada à opção escolhida no menu para ser enviada ao servidor
         if message == '1':
@@ -74,7 +121,7 @@ class Client:
 
         elif message == '2':
             message = f'{UPDATE_MSG}::={self._name},'
-            port = Util.get_port_input(self._used_ports, 'Insira a sua porta')
+            port = Util.get_port_input(self._used_ports, 'Insira a sua nova porta')
             message += str(port)
 
         elif message == '3':
@@ -86,31 +133,51 @@ class Client:
 
         return message
 
-
     def split_message(self, message): #função para decodificar uma mensagem recebida do servidor
         msg = message.split("::=")
         return msg
     
-    def compute_user_query_answer(self, message, valid_answers):
+    def get_call_ports(self):
+        print('\nInforme a porta para receber os fluxos de áudio:')
+        audio_port = Util.get_port_input(self._used_ports)
+        self._used_ports.append(str(audio_port))
+
+        print('Informe a porta para receber os fluxos de vídeo:')
+        video_port =  Util.get_port_input(self._used_ports)
+        self._used_ports.append(str(video_port))
+
+        return [audio_port, video_port]
+    
+    def compute_user_query_call(self, message, valid_answers):
         call_answer = input('> ')
         call_answer = Util.process_input(call_answer, valid_answers)
         if call_answer == 's':
-            print('Iniciando requisição...')
-            _, peer_ip, peer_port = message.split('|')
+            peer_name, peer_ip, peer_port = message.split('|')
+            peer_name = peer_name.split(':')[1].strip()
             peer_ip = peer_ip.split(':')[1].strip()
             peer_port = peer_port.split(':')[1].strip()
 
             self._listening_server_name = False
+            msg = f'{CLIENT_SET_IN_CALL}::={self._name},{True}'
+            self._socket.send(msg.encode(FORMAT))
+
+            audio_port, video_port = self.get_call_ports()
             self._p2p_client = P2PClient(self)
-            self._p2p_client.start(peer_ip, peer_port, self._name)
-    
+            self._p2p_client.start(peer_name, peer_ip, peer_port, self._name, audio_port, video_port)
+            print('Iniciando requisição...')
+
     def update_reception_port(self, old_port, new_port):
-        self._used_ports.remove(old_port)
+        if old_port in self._used_ports:
+            self._used_ports.remove(old_port)
         self._used_ports.append(new_port)
+        self._p2p_server.set_stop(True)
+        time.sleep(1.0)
+        self._listening_server_name = False
         server_p2p_thread = threading.Thread(target=self._p2p_server.update_p2p_socket, args=(self._ip, new_port))
         server_p2p_thread.start()
     
     def start_p2p_server_thread(self, ip, port):
+        self._listening_server_name = False
         server_p2p_thread = threading.Thread(target=self._p2p_server.start, args=(ip, port))
         server_p2p_thread.start()
 
@@ -122,7 +189,7 @@ class Client:
         print('\'4\' - Desvincular-se do servidor' )
         print('-' * 50)
 
-    def run(self, option):
+    def establish_server_names_connection(self, option):
         if option == '1':  #verifica se a opção escolhida foi a opção de cadastro  
             msg = f'{NEW_REGISTER_MSG}::={self._name},{self._ip},{self._reception_port},{self._password}' #mensagem de registro 
             self.start_p2p_server_thread(self._ip, self._reception_port)
@@ -130,6 +197,8 @@ class Client:
             msg = f'{LOGIN}::={self._name},{self._password}'
         self._socket.send(msg.encode(FORMAT)) #função que envia a mensagem de registro para o servidor
 
+    def run(self, option):
+        self.establish_server_names_connection(option)
 
         receiving = True
         connected = True
@@ -158,12 +227,13 @@ class Client:
                     receiving = False
 
                 elif msg[0] == DISCONNECT_MSG: #se receber uma mensagem do servidor que a conexão foi encerrada, ele sai do loop
-                    self._p2p_server.exit()
+                    self._p2p_server.set_stop(True)
                     connected = False
                 
                 elif msg[0] == FORCED_DISCONNECTION_MSG: #se receber uma mensagem de desconexão forçada, o cliente manda mensagem confirmando a desconexão 
                     msg = f'{FORCED_DISCONNECTION_MSG}::={self._name}'
                     self._socket.send(msg.encode(FORMAT)) 
+                    self._p2p_server.set_stop(True)
                     connected = False
 
                 elif msg[0] == TRY_AGAIN or msg[0] == UPDATE_MSG: #tratamento de erro se o usuario digitar uma porta que já existe na tabela no momento do cadastro ou no momento de atualizar sua porta
@@ -181,7 +251,8 @@ class Client:
                     content = msg[1]
                     if content.split(':')[0] != USER_NOT_FOUND_MSG: 
                         print('Deseja ligar para este usuário?\n \'s\' - sim\n \'n\' - não')
-                        self.compute_user_query_answer(content, ['s', 'n'])
+                        self.compute_user_query_call(content, ['s', 'n'])
+
                     else:
                         self._clear_console = False
                     receiving = False

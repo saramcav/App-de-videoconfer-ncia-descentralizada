@@ -11,27 +11,13 @@ class P2PClient:
         msg = message.split("::=")
         return msg
     
-    def start(self, server_host, server_port, client_name):
+    def start(self, server_name, server_host, server_port, client_name, audio_port, video_port):    
         server_addr = (server_host, int(server_port)) 
         self._socket.connect(server_addr)
-        self.run(client_name)
-
-    def get_call_ports(self, name, peer_audio_port, peer_video_port):
-        print(f'{name} aceitou a sua ligação. Portas: {peer_audio_port}, {peer_video_port}')
-        print('\nInforme a porta para receber os fluxos de áudio:')
-        used_ports = self._server_names_client.get_used_ports()
-        audio_port = Util.get_port_input(used_ports)
-        self._server_names_client.add_used_port(str(audio_port))
-
-        print('Informe a porta para receber os fluxos de vídeo:')
-        video_port =  Util.get_port_input(used_ports)
-        self._server_names_client.add_used_port(str(video_port))
-
-        return f'{CLIENT_CALL_PORT}::={audio_port},{video_port}'
+        self.run(server_name, client_name, audio_port, video_port)
     
-    def run(self, client_name):
-        self._server_names_client.set_listening_server_name(False)
-        call_request = f'{PEER_CALL_REQUEST}::={client_name}'
+    def run(self, server_name, client_name, audio_port, video_port):
+        call_request = f'{PEER_CALL_REQUEST}::={client_name},{audio_port},{video_port}'
         self._socket.send(call_request.encode(FORMAT)) 
 
         connected = True
@@ -42,18 +28,17 @@ class P2PClient:
             print(f'[SERVIDOR P2P] {original_msg}')
 
             if msg[0] == SERVER_CALL_ACK:
-                name, peer_audio_port, peer_video_port = msg[1].split(',')
-                answer_msg = self.get_call_ports(name, peer_audio_port, peer_video_port)
+                peer_audio_port, peer_video_port = msg[1].split(',')
+                print(f'{server_name} aceitou a sua ligação. Portas: {peer_audio_port}, {peer_video_port}')
                 print('Iniciando ligação...')
 
             elif msg[0] == SERVER_CALL_NACK:
-                print(f'{msg[1]} recusou a sua ligação. Desconectando-se...')
+                print(f'{server_name} recusou a sua ligação. Desconectando-se...')
                 answer_msg = f'{DISCONNECT_MSG}::=Encerrando conexão...'
                 self._server_names_client.set_clear_console(False)
+                self._server_names_client.send_server_call_msg(False)
                 connected = False
-            
-            self._socket.send(answer_msg.encode(FORMAT))
+                self._socket.send(answer_msg.encode(FORMAT))
 
         self._server_names_client.set_listening_server_name(True)
         self._socket.close()
-
