@@ -2,6 +2,7 @@ import socket
 import threading
 from config import *
 from client_register import ClientRegister
+from util import Util
 
 class Server:
     def __init__(self, host, port):
@@ -25,7 +26,7 @@ class Server:
         while conectado:
             msg = conn.recv(SIZE).decode(FORMAT) #função que fica ouvindo o socket cliente
             print(f'[{addr}] {msg}')
-            msg = self.split_message(msg)
+            msg = Util.split_message(msg)
 
             if msg[0] == DISCONNECT_MSG: #se a mensagem recebida for para desconectar o cliente
                 client = msg[1]
@@ -70,10 +71,6 @@ class Server:
             conn.send(msg.encode(FORMAT)) #função que envia a mensagem resposta para o cliente
             
         conn.close() #função que encerra a conexão com o socket cliente
-    
-    def split_message(self, message): #função para decodificar uma mensagem recebida do cliente
-        msg = message.split("::=")
-        return msg
 
     def set_client_call(self, client_name, truth_value):
         client = self._clients.get(client_name)

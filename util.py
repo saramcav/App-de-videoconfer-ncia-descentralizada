@@ -51,3 +51,7 @@ class Util:
             text = input(f'{label}> ')
             return Util.process_open_input(label, text)
         return text
+    
+    def split_message(message): #função para decodificar uma mensagem recebida do servidor
+        msg = message.split("::=")
+        return msg

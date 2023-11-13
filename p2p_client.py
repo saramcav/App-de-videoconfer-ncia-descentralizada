@@ -6,10 +6,6 @@ class P2PClient:
     def __init__(self, server_names_client):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_names_client = server_names_client
-
-    def split_message(self, message):
-        msg = message.split("::=")
-        return msg
     
     def start(self, server_name, server_host, server_port, client_name, audio_port, video_port):    
         server_addr = (server_host, int(server_port)) 
@@ -23,7 +19,7 @@ class P2PClient:
         connected = True
         while connected:
             original_msg = self._socket.recv(SIZE).decode(FORMAT) 
-            msg = self.split_message(original_msg) 
+            msg = Util.split_message(original_msg) 
             Util.clear_console()
             print(f'[SERVIDOR P2P] {original_msg}')
 

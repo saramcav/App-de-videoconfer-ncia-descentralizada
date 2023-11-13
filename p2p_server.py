@@ -12,14 +12,8 @@ class P2PServer:
         self._stop = truth_value
 
     def update_p2p_socket(self, ip, new_port):
-        self._stop = True
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self._socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self.start(ip, new_port)
-
-    def split_message(self, message):
-        msg = message.split("::=")
-        return msg
 
     def start(self, server_host, server_port):
         self._stop = False
@@ -77,7 +71,7 @@ class P2PServer:
         connected = True
         while connected:
             original_msg = conn.recv(SIZE).decode(FORMAT) 
-            msg = self.split_message(original_msg) 
+            msg = Util.split_message(original_msg) 
             Util.clear_console()
             print(f'[{addr}] {original_msg}')
 

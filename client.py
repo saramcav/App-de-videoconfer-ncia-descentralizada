@@ -113,7 +113,6 @@ class Client:
     def get_input(self, valid_answers):
         return self.get_input_windows(valid_answers) if os.name == 'nt' else self.get_input_linux(valid_answers)
 
-
     def encode_message(self, message): #função que cria a mensagem associada à opção escolhida no menu para ser enviada ao servidor
         if message == '1':
             message = f'{USER_QUERY_MSG}::='
@@ -132,10 +131,6 @@ class Client:
             message = f'{DISCONNECT_MSG}::={self._name}'
 
         return message
-
-    def split_message(self, message): #função para decodificar uma mensagem recebida do servidor
-        msg = message.split("::=")
-        return msg
     
     def get_call_ports(self):
         print('\nInforme a porta para receber os fluxos de áudio:')
@@ -211,12 +206,12 @@ class Client:
                 
                 if receiving:
                     msg = self._socket.recv(SIZE).decode(FORMAT) #função que fica ouvindo o servidor 
-                    msg = self.split_message(msg) 
+                    msg = Util.split_message(msg) 
                     if len(msg[1].split(',')) == 1:
                         print(f'[SERVIDOR DE NOMES]: {msg[1]}')
                 else:
                     msg = '[MENU]::='
-                    msg = self.split_message(msg)
+                    msg = Util.split_message(msg)
                     receiving = True
                 
            
