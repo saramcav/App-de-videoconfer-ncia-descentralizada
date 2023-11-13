@@ -162,8 +162,7 @@ class Client:
             print('Iniciando requisição...')
 
     def update_reception_port(self, old_port, new_port):
-        if old_port in self._used_ports:
-            self._used_ports.remove(old_port)
+        self._used_ports.remove(old_port)
         self._used_ports.append(new_port)
         self._p2p_server.set_stop(True)
         time.sleep(1.0)
@@ -219,6 +218,7 @@ class Client:
                     print('Bem vindo/a novamente!')
                     reception_port = msg[1]
                     self.start_p2p_server_thread(self._ip, reception_port)
+                    self._used_ports.append(reception_port)
                     receiving = False
 
                 elif msg[0] == DISCONNECT_MSG: #se receber uma mensagem do servidor que a conexão foi encerrada, ele sai do loop
