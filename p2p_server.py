@@ -1,6 +1,8 @@
 import socket
 from config import *
 from util import Util
+from vidstream import *
+import threading
 
 class P2PServer:
     def __init__(self, server_names_client):
@@ -62,7 +64,7 @@ class P2PServer:
             self._server_names_client.set_clear_console(False)
             answer_msg = f'{SERVER_CALL_NACK}::='
         
-        return answer_msg
+        return [audio_port, video_port, answer_msg]
 
     def handle_client(self, conn, addr):
         self._server_names_client.set_listening_server_name(False)
@@ -79,7 +81,11 @@ class P2PServer:
                 p2p_client = msg[1].split(',')[0]
                 print(f'{p2p_client} está te ligando. Deseja aceitar a ligação?\n \'s\' - sim \n \'n\' - não')
                 answer_msg = self.compute_call_answer(['s', 'n'])
-                conn.send(answer_msg.encode(FORMAT))
+                conn.send(answer_msg[-1].encode(FORMAT))
+                self._video_receiver = StreamingServer(msg[1].split(',')[3], answer_msg[1])
+                self._audio_receiver = AudioReceiver(msg[1].split(',')[3], answer_msg[0])
+                self.start_listening()
+                self.start_camera_stream(msg[1].split(',')[3], msg[1].split(',')[2])
 
             elif msg[0] == DISCONNECT_MSG:
                 connected = False
@@ -88,3 +94,14 @@ class P2PServer:
         
         self._server_names_client.set_listening_server_name(True)
         conn.close()
+
+    def start_listening(self):
+        self._t1 = threading.Thread(target=self._video_receiver.start_server)
+        self._t2 = threading.Thread(target=self._audio_receiver.start_server)
+        self._t1.start()
+        self._t2.start()
+
+    def start_camera_stream(self, ip, video_port):
+        self._camera_client = ScreenShareClient(ip, int(video_port))
+        self._t3 = threading.Thread(target=self._camera_client.start_stream)
+        self._t3.start()

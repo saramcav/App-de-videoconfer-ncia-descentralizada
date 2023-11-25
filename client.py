@@ -158,8 +158,9 @@ class Client:
 
             audio_port, video_port = self.get_call_ports()
             self._p2p_client = P2PClient(self)
-            self._p2p_client.start(peer_name, peer_ip, peer_port, self._name, audio_port, video_port)
+            self._p2p_client.start(peer_name, peer_ip, peer_port, self._ip, self._name, audio_port, video_port)
             print('Iniciando requisição...')
+
 
     def update_reception_port(self, old_port, new_port):
         self._used_ports.remove(old_port)
