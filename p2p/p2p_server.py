@@ -49,6 +49,8 @@ class P2PServer:
 
     def compute_call_answer(self, valid_answers):
         # Solicita e processa a resposta do usuário para uma chamada de P2P.
+        audio_port = 0
+        video_port = 0
         call_answer = input('> ')
         call_answer = Util.process_input(call_answer, valid_answers)
         if call_answer == 's':
@@ -70,7 +72,7 @@ class P2PServer:
             self._server_names_client.set_clear_console(False)
             answer_msg = f'{SERVER_CALL_NACK}::='
         
-        return [audio_port, video_port, answer_msg]
+        return [audio_port, video_port, answer_msg, call_answer]
 
     def handle_client(self, conn, addr):
         # Lida com a comunicação com um cliente P2P, aceitando ou recusando chamadas.
@@ -91,14 +93,15 @@ class P2PServer:
                 p2p_client_audio_port = msg[1].split(',')[1]
                 print(f'{p2p_client} está te ligando. Deseja aceitar a ligação?\n \'s\' - sim \n \'n\' - não')
                 answer_msg = self.compute_call_answer(['s', 'n'])
-                conn.send(answer_msg[-1].encode(FORMAT))
-                video_port = answer_msg[1]
-                audio_port = answer_msg[0]
-                self._video_receiver = StreamingServer(self._ip, int(video_port))
-                self._audio_receiver = AudioReceiver(self._ip, int(audio_port))
-                self.start_listening()
-                self.start_camera_stream(p2p_client_ip, p2p_client_video_port)
-                self.start_audio_stream(p2p_client_ip, p2p_client_audio_port)
+                conn.send(answer_msg[2].encode(FORMAT))
+                if answer_msg[-1] == 's':
+                    video_port = answer_msg[1]
+                    audio_port = answer_msg[0]
+                    self._video_receiver = StreamingServer(self._ip, int(video_port))
+                    self._audio_receiver = AudioReceiver(self._ip, int(audio_port))
+                    self.start_listening()
+                    self.start_camera_stream(p2p_client_ip, p2p_client_video_port)
+                    self.start_audio_stream(p2p_client_ip, p2p_client_audio_port)
 
             elif msg[0] == DISCONNECT_MSG:
                 connected = False
