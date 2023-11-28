@@ -1,10 +1,10 @@
 import socket
 import getpass
 import threading
-from config import *
-from p2p_client import P2PClient
-from p2p_server import P2PServer
-from util import Util
+from configs.config import *
+from p2p.p2p_client import P2PClient
+from p2p.p2p_server import P2PServer
+from configs.util import Util
 import time
 import os
 if os.name == 'nt':

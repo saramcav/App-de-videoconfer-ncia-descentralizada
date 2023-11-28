@@ -1,8 +1,8 @@
 import socket
 import threading
-from config import *
-from client_register import ClientRegister
-from util import Util
+from configs.config import *
+from configs.client_register import ClientRegister
+from configs.util import Util
 
 class Server:
     def __init__(self, host, port):

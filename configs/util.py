@@ -17,6 +17,7 @@ class Util:
 
             except ValueError:
                 print('[VALOR INVÁLIDO] Insira um número inteiro válido.')
+                
 
     def clear_console():
         os.system('cls' if os.name == 'nt' else 'clear')
