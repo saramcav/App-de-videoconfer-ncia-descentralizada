@@ -7,7 +7,7 @@
 `~$ cd trabalho-redes2`
 
 3. Execute o código do servidor:<br/>
-`~$ python servidor.py`
+`~$ python server.py`
 
 5. Execute o código do cliente:<br/>
-`~$ python cliente.py`
+`~$ python client.py`
